@@ -1,101 +1,256 @@
 "use strict"
 let touched=false;
-let grid=document.getElementById('wrapper');
-
+let grid=document.getElementById('grid_holder');
+let block_holder=document.getElementById('block_holder');
 let grid_back=document.getElementById("grid_background");
 
 let black_and_white=document.getElementById('black_and_white');
 
-let menu_back=document.getElementById('menu');
 
+
+//Смена цвета фона
 grid_back.addEventListener('input',function () {
 
-    document.querySelector('body').style.backgroundColor=grid_back.value
-
+    document.getElementById('core').style.backgroundColor=grid_back.value
     let tmp=document.querySelectorAll('.grid_cell');
     for (let cell of tmp){
         cell.style.borderColor=invertColor(grid_back.value,black_and_white.checked);
     }
 
-    let labels_tmp=document.querySelectorAll('label');
-    for (let label of labels_tmp){
-        label.style.color=invertColor(grid_back.value,black_and_white.checked);
-    }
+
 
 })
-let block;
-let start_position;
-let first_time;
-let prev_row;
-let prev_colum;
+
+let rows={};
+let columns={};
+let layer=getCurrentLayer();
 // генерация сетки
-for (let i=1;i<=10;i++){
-    for (let j=1;j<=10;j++){
-        let cell=document.createElement('div');
-        cell.classList.add('grid_cell');
-        cell.style.gridArea=`${i}/${j}/${i}/${j}`;
+function GenerateGrid(rows_number,columns_number) {
 
-        grid.appendChild(cell);
-        function FirstTouch() {
-            if (!touched) {
-                first_time=true;
-                touched = true;
-                block = document.createElement('div');
-                block.addEventListener('mouseup',Finish);
-                block.style.gridArea=cell.style.gridArea;
-                block.style.zIndex=`-1`;
-                block.style.backgroundColor=invertColor(grid_back.value,false);
-                grid.appendChild(block);
-                start_position=cell.style.gridArea.match(/^(\d+ \/ \d+)/)[0].match(/\d+/g);
-            }
+    for (let i = 1; i <= rows_number; i++) {
+        if (rows[i] == null) {
+            rows[i] = [];
         }
-
-        function Enlarge() {
-            if (touched){
-                let tmp
-
-                if (first_time===true){
-                    prev_colum=start_position[0];
-                    prev_row=start_position[1];
-                    first_time=false;
-                }
-
-                let row_start=Number(block.style.gridArea.match(/^(\d+ \/ \d+)/)[0].match(/\d+/g)[0]);
-                let row_end=Number(cell.style.gridArea.match(/(\d+ \/ \d+)$/)[0].match(/\d+/g)[0]);
-
-                let column_start=Number(block.style.gridArea.match(/^(\d+ \/ \d+)/)[0].match(/\d+/g)[1]);
-                let column_end=Number(cell.style.gridArea.match(/(\d+ \/ \d+)$/)[0].match(/\d+/g)[1]);
-
-                console.log(prev_colum,column_end)
-                if ( column_start<column_end+1) {
-                    block.style.gridArea=block.style.gridArea.replace(/^(\d+ \/ \d+)/,start_position.join(" / "));
-                    tmp = cell.style.gridArea.match(/(\d+ \/ \d+)$/)[0].match(/\d+/g).map(e => Number(e) + 1).join(" / ");
-                    block.style.gridArea=block.style.gridArea.replace(/(\d+ \/ \d+)$/,tmp);
-                }
-                else {
-
-                    block.style.gridArea=block.style.gridArea.replace(/^(\d+ \/ \d+)/,start_position.map(e => Number(e) + 1).join(" / "));
-                    tmp=cell.style.gridArea.match(/(\d+ \/ \d+)$/)[0].match(/\d+/g).join(" / ");
-                    block.style.gridArea=block.style.gridArea.replace(/(\d+ \/ \d+)$/,tmp);
-                }
-                prev_row=cell.style.gridArea.match(/^(\d+ \/ \d+)/)[0].match(/\d+/g)[0];
-                prev_colum=cell.style.gridArea.match(/^(\d+ \/ \d+)/)[0].match(/\d+/g)[1];
-
-                // console.log(tmp);
-
-
-                console.log(block.style.gridArea);
+        for (let j = 1; j <= columns_number; j++) {
+            if (columns[j] == null) {
+                columns[j] = [];
             }
+            let cell = document.createElement('div');
+            cell.classList.add('grid_cell');
+
+            cell.style.gridArea = `${i}/${j}/${i}/${j}`;
+
+            grid.appendChild(cell);
+
+            rows[i].push(grid.lastChild);
+            columns[j].push(grid.lastChild);
+
+            cell.addEventListener('mousedown', function () {
+                FirstTouch(this,getCurrentLayer())
+            });
+            cell.addEventListener('mouseover', function () {
+                Enlarge(this);
+            })
+            cell.addEventListener('mouseup', function () {
+                Finish(getCurrentLayer());
+            });
+
         }
-
-        cell.addEventListener('mousedown',FirstTouch);
-        cell.addEventListener('mouseover',Enlarge);
-        cell.addEventListener('mouseup',Finish);
-
     }
 }
-function Finish() {
+GenerateGrid(10,10);
+
+
+let rows_input=document.getElementById('rows');
+let columns_input=document.getElementById('columns')
+
+rows_input.addEventListener('input',function () {
+
+    Regenerate_grid(rows_input.value,columns_input.value,grid);
+
+})
+
+columns_input.addEventListener('input',function () {
+
+    Regenerate_grid(rows_input.value,columns_input.value,grid);
+
+})
+
+//изменение размеров сетки
+function Regenerate_grid(rows,columns,grid,layer) {
+    while(grid.firstChild){
+       grid.removeChild(grid.lastChild);
+    }
+    grid.style.gridTemplateRows=`repeat(${rows}, 1fr)`;
+    grid.style.gridTemplateColumns=`repeat(${columns}, 1fr)`;
+    for (layer of block_holder.querySelectorAll('.layer')) {
+        layer.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+        layer.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+    }
+    GenerateGrid(rows,columns)
+
+}
+
+
+let block;
+let start_position;
+function FirstTouch(cell,layer) {
+    if (!touched) {
+        touched = true;
+        block = document.createElement('div');
+        block.addEventListener('mouseup',Finish);
+        block.style.zIndex=String(layer);
+        block.style.gridArea=cell.style.gridArea;
+        block.classList.add('block');
+        block.style.backgroundColor=invertColor(grid_back.value,false);
+
+        FindLayer(getCurrentLayer()).appendChild(block);
+
+        start_position=cell.style.gridArea.match(/^(\d+ \/ \d+)/)[0].match(/\d+/g);
+    }
+}
+
+function Enlarge(cell) {
+    if (touched) {
+        let tmp
+
+
+        let row_end = Number(cell.style.gridArea.match(/(\d+ \/ \d+)$/)[0].match(/\d+/g)[0]);
+
+
+        let column_end = Number(cell.style.gridArea.match(/(\d+ \/ \d+)$/)[0].match(/\d+/g)[1]);
+
+        if (start_position[1] <= column_end) {
+
+            block.style.gridArea = block.style.gridArea.replace(/^(\d+ \/ \d+)/, start_position.join(" / "));
+            tmp = cell.style.gridArea.match(/(\d+ \/ \d+)$/)[0].match(/\d+/g).map(e => Number(e) + 1).join(" / ");
+
+        } else {
+
+            block.style.gridArea = block.style.gridArea.replace(/^(\d+ \/ \d+)/, start_position.map(e => Number(e) + 1).join(" / "));
+            tmp = cell.style.gridArea.match(/(\d+ \/ \d+)$/)[0].match(/\d+/g).join(" / ");
+
+        }
+        block.style.gridArea = block.style.gridArea.replace(/(\d+ \/ \d+)$/, tmp);
+    }
+}
+
+function Finish(layer) {
     touched=false;
+    block.style.pointerEvents='auto';
+}
+
+//слои
+//смена слоя
+for (let button of document.getElementById('layers_list').querySelectorAll('li>input')){
+    button.addEventListener('click',function () {
+        if (button.checked){
+            grid.style.zIndex=String(getCurrentLayer());
+        }
+    })
+    }
+document.getElementById('prev_layer').addEventListener('click',function () {
+
+    let layer_block = document.createElement('div');
+    let layer_li = document.createElement('li');
+    let new_layer = String(Number(document.getElementById('layers_list').querySelectorAll('li>input')[0].value )-1);
+    let layer_input=document.createElement('input');
+
+    layer_input.setAttribute('type','radio');
+    layer_input.setAttribute('name','layer');
+    layer_input.setAttribute('value',`${new_layer}`);
+    layer_input.setAttribute('id',`${new_layer}`);
+
+    layer_input.addEventListener('click', function () {
+        if (layer_input.checked) {
+
+            if (block_holder.children > 0) {
+                for (let layer of block_holder.children) {
+                    if (layer.style.zIndex < getCurrentLayer()) {
+                        for (let block of layer) {
+                            block.style.pointerEvents = `none`;
+                        }
+                    }
+                    else{
+                        for (let block of layer) {
+                            block.style.pointerEvents = `auto`;
+                        }
+
+                    }
+                }
+            }
+        }
+    })
+
+    let layer_label=document.createElement("label");
+    layer_label.setAttribute('for',`${new_layer}`)
+    layer_label.textContent=`слой ${new_layer}`
+    layer_li.appendChild(layer_input);
+    layer_li.appendChild(layer_label);
+    document.getElementById('layers_list').prepend(layer_li);
+    layer_block.classList.add('layer');
+    layer_block.classList.add(`l${new_layer}`);
+    layer_block.style.zIndex = String(new_layer);
+    block_holder.prepend(layer_block);
+
+
+})
+document.getElementById('next_layer').addEventListener('click',function () {
+
+    let layer_block = document.createElement('div');
+    let layer_li = document.createElement('li');
+    let new_layer = String(Number(document.getElementById('layers_list').querySelectorAll('li>input')[document.getElementById('layers_list').querySelectorAll('li>input').length-1].value )+1);
+    let layer_input=document.createElement('input');
+    layer_input.setAttribute('type','radio');
+    layer_input.setAttribute('name','layer');
+    layer_input.setAttribute('value',`${new_layer}`);
+    layer_input.setAttribute('id',`${new_layer}`);
+
+    layer_input.addEventListener('click', function () {
+        if (layer_input.checked) {
+
+            if (block_holder.children > 0) {
+                for (let layer of block_holder.children) {
+                    if (layer.style.zIndex < getCurrentLayer()) {
+                        for (let block of layer) {
+                            block.style.pointerEvents = `none`;
+                        }
+                    }
+                }
+            }
+        }
+    })
+
+    let layer_label=document.createElement("label");
+    layer_label.setAttribute('for',`${new_layer}`)
+    layer_label.textContent=`слой ${new_layer}`
+    layer_li.appendChild(layer_input);
+    layer_li.appendChild(layer_label);
+    document.getElementById('layers_list').appendChild(layer_li);
+    layer_block.classList.add('layer');
+    layer_block.classList.add(`l${new_layer}`);
+    layer_block.style.zIndex = String(new_layer);
+    block_holder.append(layer_block);
+
+
+
+
+    document.getElementById('layers_list').append(layer_li);
+
+})
+//получить текущий слой
+function getCurrentLayer() {
+    for (let button of document.getElementById('layers_list').querySelectorAll('li>input')){
+        {
+            if (button.checked) {
+            return button.value;
+            }
+        }
+    }
+}
+//получть блок текущего слоя;
+function FindLayer(layer_num) {
+    return block_holder.querySelector(`.layer.l${layer_num} `)
 }
 
 

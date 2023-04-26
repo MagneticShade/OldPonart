@@ -6,19 +6,40 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<div id="core">
+
+    <div id="grid_holder">
+
+    </div>
+    <div id="block_holder">
+        <div class="layer l0" >
+
+        </div>
+    </div>
+</div>
     <div id="menu">
-        <label for="grid_background">Смена цвета фона</label>
-        <input type="color" value="#ffffff" name="" id="grid_background">
+        <div class="section">
+            <label for="grid_background">Смена цвета фона</label>
+            <input type="color" value="#ffffff" name="" id="grid_background">
 
-        <label for="black_and_white">только ч/б границы</label>
-        <input type="checkbox" name="" id="black_and_white">
-    </div>
+            <label for="black_and_white">только ч/б границы</label>
+            <input type="checkbox" name="" id="black_and_white">
+        </div>
+        <div class="section">
+            <label for="black_and_white">строки</label>
+            <input type="number" value="10" max="30" id="rows">
 
-    <div id="wrapper">
-
-    </div>
-    <div id="wrapper_back">
-
+            <label for="black_and_white">столбцы</label>
+            <input type="number" value="10" max="30" id="columns">
+        </div>
+        <div class="section" id="layers">
+            <button id="prev_layer"> Новый слой</button>
+            <ul id="layers_list">
+                <li><input checked type="radio" name="layer" value="0" id="0">  <label for="0">Базовый слой</label></li>
+            </ul>
+            <button id="next_layer">Новый слой</button>
+        </div>
     </div>
 
 </body>
