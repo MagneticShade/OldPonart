@@ -21,20 +21,13 @@ grid_back.addEventListener('input',function () {
 
 })
 
-let rows={};
-let columns={};
-let layer=getCurrentLayer();
+
+
 // генерация сетки
 function GenerateGrid(rows_number,columns_number) {
 
     for (let i = 1; i <= rows_number; i++) {
-        if (rows[i] == null) {
-            rows[i] = [];
-        }
         for (let j = 1; j <= columns_number; j++) {
-            if (columns[j] == null) {
-                columns[j] = [];
-            }
             let cell = document.createElement('div');
             cell.classList.add('grid_cell');
 
@@ -42,24 +35,23 @@ function GenerateGrid(rows_number,columns_number) {
 
             grid.appendChild(cell);
 
-            rows[i].push(grid.lastChild);
-            columns[j].push(grid.lastChild);
 
-            cell.addEventListener('mousedown', function () {
-                FirstTouch(this,getCurrentLayer())
-            });
-            cell.addEventListener('mouseover', function () {
-                Enlarge(this);
-            })
-            cell.addEventListener('mouseup', function () {
-                Finish(getCurrentLayer());
-            });
+
 
         }
     }
 }
 GenerateGrid(10,10);
 
+// cell.addEventListener('mousedown', function () {
+//     FirstTouch(this,getCurrentLayer())
+// });
+// cell.addEventListener('mouseover', function () {
+//     Enlarge(this);
+// })
+// cell.addEventListener('mouseup', function () {
+//     Finish();
+// });
 
 let rows_input=document.getElementById('rows');
 let columns_input=document.getElementById('columns')
@@ -93,65 +85,97 @@ function Regenerate_grid(rows,columns,grid,layer) {
 
 
 let block;
-let start_position;
-function FirstTouch(cell,layer) {
+let start_position={};
+//создание блоков
+function FirstTouch(eventPositionX,eventPositionY,layer) {
     if (!touched) {
+
         touched = true;
         block = document.createElement('div');
         block.addEventListener('mouseup',Finish);
         block.style.zIndex=String(layer);
-        block.style.gridArea=cell.style.gridArea;
+        block.style.left=`${eventPositionX}px`;
+        block.style.top=`${eventPositionY}px`;
         block.classList.add('block');
         block.style.backgroundColor=invertColor(grid_back.value,false);
 
         FindLayer(getCurrentLayer()).appendChild(block);
 
-        start_position=cell.style.gridArea.match(/^(\d+ \/ \d+)/)[0].match(/\d+/g);
+        start_position={'x':eventPositionX,'y':eventPositionY};
     }
 }
 
-function Enlarge(cell) {
+function Enlarge(eventPositionX,eventPositionY) {
     if (touched) {
-        let tmp
 
-
-        let row_end = Number(cell.style.gridArea.match(/(\d+ \/ \d+)$/)[0].match(/\d+/g)[0]);
-
-
-        let column_end = Number(cell.style.gridArea.match(/(\d+ \/ \d+)$/)[0].match(/\d+/g)[1]);
-
-        if (start_position[1] <= column_end) {
-
-            block.style.gridArea = block.style.gridArea.replace(/^(\d+ \/ \d+)/, start_position.join(" / "));
-            tmp = cell.style.gridArea.match(/(\d+ \/ \d+)$/)[0].match(/\d+/g).map(e => Number(e) + 1).join(" / ");
-
-        } else {
-
-            block.style.gridArea = block.style.gridArea.replace(/^(\d+ \/ \d+)/, start_position.map(e => Number(e) + 1).join(" / "));
-            tmp = cell.style.gridArea.match(/(\d+ \/ \d+)$/)[0].match(/\d+/g).join(" / ");
-
+        if (start_position.x>eventPositionX){
+        block.style.left=`${eventPositionX}px`;
         }
-        block.style.gridArea = block.style.gridArea.replace(/(\d+ \/ \d+)$/, tmp);
+        else{
+            block.style.left=`${start_position.x}px`
+        }
+        if (start_position.y>eventPositionY){
+           block.style.top=`${eventPositionY}px`;
+        }
+        else{
+            block.style.top=`${start_position.y}px`;
+        }
+
+        block.style.width=`${Math.abs(start_position.x-eventPositionX)}px`;
+        block.style.height=`${Math.abs(start_position.y-eventPositionY)}px`
     }
 }
 
-function Finish(layer) {
+function Finish() {
     touched=false;
     block.style.pointerEvents='auto';
 }
 
 //слои
+FindLayer(getCurrentLayer()).addEventListener('mousedown', function (event) {
+    FirstTouch(event.clientX,event.clientY,getCurrentLayer())
+});
+FindLayer(getCurrentLayer()).addEventListener('mousemove', function (event) {
+    Enlarge(event.clientX,event.clientY);
+})
+FindLayer(getCurrentLayer()).addEventListener('mouseup', function () {
+    Finish();
+});
 //смена слоя
-for (let button of document.getElementById('layers_list').querySelectorAll('li>input')){
-    button.addEventListener('click',function () {
-        if (button.checked){
-            grid.style.zIndex=String(getCurrentLayer());
+    document.getElementById('layers_list').querySelector('li>input').addEventListener('click',function () {
+        if ( document.getElementById('layers_list').querySelector('li>input').checked){
+
+            if (block_holder.childElementCount > 0) {
+                for (let layer of block_holder.children) {
+                    if (layer.childElementCount > 0) {
+                        if (layer.style.zIndex < getCurrentLayer()) {
+                            for (let block of layer.children) {
+                                block.style.pointerEvents = `none`;
+                            }
+                        } else {
+                            for (let block of layer.children) {
+                                block.style.pointerEvents = `auto`;
+                            }
+
+                        }
+                    }
+                }
+            }
         }
     })
-    }
+
 document.getElementById('prev_layer').addEventListener('click',function () {
 
     let layer_block = document.createElement('div');
+       layer_block.addEventListener('mousedown', function (event) {
+        FirstTouch(event.clientX,event.clientY,getCurrentLayer())
+    });
+    layer_block.addEventListener('mousemove', function (event) {
+        Enlarge(event.clientX,event.clientY);
+    })
+    layer_block.addEventListener('mouseup', function () {
+        Finish();
+    });
     let layer_li = document.createElement('li');
     let new_layer = String(Number(document.getElementById('layers_list').querySelectorAll('li>input')[0].value )-1);
     let layer_input=document.createElement('input');
@@ -164,23 +188,26 @@ document.getElementById('prev_layer').addEventListener('click',function () {
     layer_input.addEventListener('click', function () {
         if (layer_input.checked) {
 
-            if (block_holder.children > 0) {
-                for (let layer of block_holder.children) {
-                    if (layer.style.zIndex < getCurrentLayer()) {
-                        for (let block of layer) {
-                            block.style.pointerEvents = `none`;
-                        }
-                    }
-                    else{
-                        for (let block of layer) {
-                            block.style.pointerEvents = `auto`;
-                        }
 
+            if (block_holder.childElementCount > 0) {
+                for (let layer of block_holder.children) {
+                    if (layer.childElementCount > 0) {
+                        if (layer.style.zIndex < getCurrentLayer()) {
+                            for (let block of layer.children) {
+                                block.style.pointerEvents = `none`;
+                            }
+                        } else {
+                            for (let block of layer.children) {
+                                block.style.pointerEvents = `auto`;
+                            }
+
+                        }
                     }
                 }
             }
         }
     })
+
 
     let layer_label=document.createElement("label");
     layer_label.setAttribute('for',`${new_layer}`)
@@ -206,14 +233,31 @@ document.getElementById('next_layer').addEventListener('click',function () {
     layer_input.setAttribute('value',`${new_layer}`);
     layer_input.setAttribute('id',`${new_layer}`);
 
+    layer_block.addEventListener('mousedown', function (event) {
+        FirstTouch(event.clientX,event.clientY,getCurrentLayer())
+    });
+    layer_block.addEventListener('mousemove', function (event) {
+        Enlarge(event.clientX,event.clientY);
+    })
+    layer_block.addEventListener('mouseup', function () {
+        Finish();
+    });
     layer_input.addEventListener('click', function () {
         if (layer_input.checked) {
 
-            if (block_holder.children > 0) {
+
+            if (block_holder.childElementCount > 0) {
                 for (let layer of block_holder.children) {
-                    if (layer.style.zIndex < getCurrentLayer()) {
-                        for (let block of layer) {
-                            block.style.pointerEvents = `none`;
+                    if (layer.childElementCount > 0) {
+                        if (layer.style.zIndex < getCurrentLayer()) {
+                            for (let block of layer.children) {
+                                block.style.pointerEvents = `none`;
+                            }
+                        } else {
+                            for (let block of layer.children) {
+                                block.style.pointerEvents = `auto`;
+                            }
+
                         }
                     }
                 }
